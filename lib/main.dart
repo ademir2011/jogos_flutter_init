@@ -50,6 +50,10 @@ class GameObject {
   }
 }
 
+class CollidableGameObject extends GameObject {
+  List<GameObject> collidingObjects = [];
+}
+
 class SpaceShooterGame extends Game {
   final Size screenSize;
   Random random = Random();
@@ -60,16 +64,15 @@ class SpaceShooterGame extends Game {
   Timer enemyCreator;
   Timer shootCreator;
 
-  List<GameObject> enemies = [];
-  List<GameObject> shoots = [];
+  List<CollidableGameObject> enemies = [];
+  List<CollidableGameObject> shoots = [];
 
   SpaceShooterGame(this.screenSize) {
     player = GameObject()..position = Rect.fromLTWH(100, 100, 50, 50);
-    enemies.add(GameObject()..position = Rect.fromLTWH(0, 0, 50, 50));
 
     enemyCreator = Timer(1.0, repeat: true, callback: () {
       enemies.add(
-        GameObject()
+        CollidableGameObject()
           ..position = Rect.fromLTWH(
             (screenSize.width - 50) * random.nextDouble(),
             0,
@@ -81,7 +84,7 @@ class SpaceShooterGame extends Game {
 
     shootCreator = Timer(0.5, repeat: true, callback: () {
       shoots.add(
-        GameObject()
+        CollidableGameObject()
           ..position = Rect.fromLTWH(
               player.position.left + 20, player.position.top - 20, 20, 20),
       );
@@ -110,10 +113,26 @@ class SpaceShooterGame extends Game {
     shoots.forEach((shoot) {
       shoot.position = shoot.position.translate(0, shoot_speed * t);
     });
+
+    shoots.forEach((shoot) {
+      enemies.forEach((enemy) {
+        if (shoot.position.overlaps(enemy.position)) {
+          shoot.collidingObjects.add(enemy);
+          enemy.collidingObjects.add(shoot);
+        }
+      });
+    });
     enemyCreator.update(t);
     shootCreator.update(t);
-    enemies.removeWhere((enemy) => enemy.position.top >= screenSize.height);
-    shoots.removeWhere((shoot) => shoot.position.bottom <= 0);
+    enemies.removeWhere(
+      (enemy) =>
+          enemy.position.top >= screenSize.height ||
+          enemy.collidingObjects.isNotEmpty,
+    );
+    shoots.removeWhere(
+      (shoot) =>
+          shoot.position.bottom <= 0 || shoot.collidingObjects.isNotEmpty,
+    );
   }
 
   @override
